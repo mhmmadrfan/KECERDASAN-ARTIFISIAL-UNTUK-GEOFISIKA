@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring & Risk Gempa Bumi Indonesia</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { brandred: '#ef4444' }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts & FontAwesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        html.dark body { background-color: #0b0f19; color: #f8fafc; }
+        html:not(.dark) body { background-color: #f1f5f9; color: #0f172a; }
+
+        html.dark .card-bg { background-color: #151c2c; border-color: #1e293b; }
+        html:not(.dark) .card-bg { background-color: #ffffff; border-color: #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+
+        html.dark .header-bg { background-color: rgba(17, 23, 38, 0.95); border-color: #1e293b; }
+        html:not(.dark) .header-bg { background-color: rgba(255, 255, 255, 0.95); border-color: #e2e8f0; }
+
+        html.dark .input-bg { background-color: #0b0f19; color: #f8fafc; border-color: #334155; }
+        html:not(.dark) .input-bg { background-color: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
+
+        html.dark .text-sub { color: #94a3b8; }
+        html:not(.dark) .text-sub { color: #64748b; }
+
+        html.dark .text-title { color: #ffffff; }
+        html:not(.dark) .text-title { color: #0f172a; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 7px; height: 7px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- HEADER BAR -->
+    <header class="header-bg border-b sticky top-0 z-50 backdrop-blur-md px-4 lg:px-8 py-3.5 transition-colors">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 bg-red-600/20 text-red-500 rounded-xl border border-red-500/40 flex items-center justify-center shadow-lg">
+                    <i class="fa-solid fa-heart-pulse text-2xl animate-pulse"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <h1 class="text-xl md:text-2xl font-extrabold tracking-tight text-title">
+                            Monitoring & Risk Gempa Bumi Indonesia
+                        </h1>
+                        <span class="px-2.5 py-0.5 text-[11px] font-bold bg-red-500/15 text-red-500 border border-red-500/30 rounded-full flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                            <span>Live Seismik Command Center</span>
+                        </span>
+                    </div>
+                    <p class="text-xs text-sub mt-0.5">
+                        Pusat Analisis & Mitigasi Risiko Bencana Geofisika Nasional
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2.5 self-end md:self-auto">
+                <button id="themeToggle" class="px-3.5 py-2 text-xs font-semibold rounded-xl card-bg text-title border transition flex items-center gap-2 shadow-sm hover:opacity-80">
+                    <i class="fa-solid fa-moon text-amber-400" id="themeIcon"></i>
+                    <span id="themeText">Mode Gelap</span>
+                </button>
+                <button onclick="window.print()" class="px-3.5 py-2 text-xs font-semibold rounded-xl card-bg text-title border transition flex items-center gap-2 shadow-sm hover:opacity-80">
+                    <i class="fa-solid fa-print"></i>
+                    <span>Cetak / PDF</span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 mt-6 space-y-6">
+
+        <!-- FILTER PANEL -->
+        <section class="card-bg p-5 rounded-2xl border shadow-xl transition-colors">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-sub mb-1.5">TAHUN</label>
+                    <select id="filterTahun" onchange="applyFilters()" class="w-full input-bg border text-sm rounded-xl p-2.5 outline-none transition">
+                        <option value="Semua">Semua Tahun (2023 - 2025)</option>
+                        <option value="2023" selected>2023</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-red-500 mb-1.5 flex items-center gap-1.5">
+                        <i class="fa-solid fa-location-dot"></i> WILAYAH / REGION
+                    </label>
+                    <select id="filterWilayah" onchange="applyFilters()" class="w-full input-bg border border-red-500/60 font-semibold text-sm rounded-xl p-2.5 outline-none transition">
+                        <option value="Semua Wilayah">Semua Wilayah Indonesia</option>
+                        <option value="Sumatera" selected>Sumatera</option>
+                        <option value="Jawa">Jawa</option>
+                        <option value="Bali & Nusa Tenggara">Bali & Nusa Tenggara</option>
+                        <option value="Kalimantan">Kalimantan</option>
+                        <option value="Sulawesi">Sulawesi</option>
+                        <option value="Maluku & Papua">Maluku & Papua</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-sub mb-1.5">KELAS MAGNITUDO</label>
+                    <select id="filterMagnitudo" onchange="applyFilters()" class="w-full input-bg border text-sm rounded-xl p-2.5 outline-none transition">
+                        <option value="Semua">Semua Kelas</option>
+                        <option value="Kecil">M &lt; 4.0 (Kecil)</option>
+                        <option value="Sedang">M 4.0 - 5.5 (Sedang)</option>
+                        <option value="Kuat">M &gt; 5.5 (Kuat / Merusak)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-sub mb-1.5">KATEGORI KEDALAMAN</label>
+                    <select id="filterKedalaman" onchange="applyFilters()" class="w-full input-bg border text-sm rounded-xl p-2.5 outline-none transition">
+                        <option value="Semua">Semua Kedalaman</option>
+                        <option value="Dangkal">Dangkal (&lt; 60 km)</option>
+                        <option value="Menengah">Menengah (60 - 300 km)</option>
+                        <option value="Dalam">Dalam (&gt; 300 km)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-sub mb-1.5">TIPE SUMBER</label>
+                    <select id="filterTipe" onchange="applyFilters()" class="w-full input-bg border text-sm rounded-xl p-2.5 outline-none transition">
+                        <option value="Semua">Semua Tipe</option>
+                        <option value="Subduksi">Subduksi Megathrust</option>
+                        <option value="Sesar Aktif">Sesar Aktif Darat</option>
+                        <option value="Intraslab">Intraslab</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-sub mb-1.5">POTENSI TSUNAMI</label>
+                    <select id="filterTsunami" onchange="applyFilters()" class="w-full input-bg border text-sm rounded-xl p-2.5 outline-none transition">
+                        <option value="Semua">Semua Status</option>
+                        <option value="Berpotensi">Berpotensi Tsunami</option>
+                        <option value="Tidak Berpotensi">Tidak Berpotensi</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-sub mb-1.5">STATUS PERINGATAN</label>
+                    <select id="filterPeringatan" onchange="applyFilters()" class="w-full input-bg border text-sm rounded-xl p-2.5 outline-none transition">
+                        <option value="Semua">Semua Level</option>
+                        <option value="Awas">Awas (Merah)</option>
+                        <option value="Siaga">Siaga (Oranye)</option>
+                        <option value="Waspada">Waspada (Kuning)</option>
+                        <option value="Normal">Normal (Hijau)</option>
+                    </select>
+                </div>
+
+                <div class="flex items-end">
+                    <button onclick="resetFilters()" class="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 font-semibold text-sm py-2.5 rounded-xl transition duration-200 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-left"></i> Reset Filter
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- LIVE SEISMIC MONITOR & REGIONAL OVERVIEW (PENGGANTI PETA) -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Simulasi Realtime Seismograph Waveform -->
+            <div class="card-bg p-5 rounded-2xl border shadow-xl lg:col-span-2 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-sm font-bold text-title flex items-center gap-2">
+                        <i class="fa-solid fa-wave-square text-red-500 animate-pulse"></i> Real-Time Seismograph Waveform (Stasiun BMKG)
+                    </h2>
+                    <span class="px-2.5 py-0.5 text-[10px] font-mono bg-red-500/10 text-red-500 rounded border border-red-500/30">CH-01 SENSOR</span>
+                </div>
+                <div class="relative w-full h-[220px] bg-slate-950 rounded-xl p-3 border border-slate-800 flex items-center overflow-hidden">
+                    <!-- Grid Lines ala Seismogram -->
+                    <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:24px_24px] opacity-40"></div>
+                    <canvas id="seismographChart" class="relative z-10 w-full h-full"></canvas>
+                </div>
+                <div class="flex justify-between items-center mt-3 text-[11px] text-sub">
+                    <span>Status: <strong class="text-emerald-400">Normal Active</strong></span>
+                    <span>Sampling Rate: 100 Hz</span>
+                    <span>Gain: 20dB</span>
+                </div>
+            </div>
+
+            <!-- Regional Seismic Status Card -->
+            <div class="card-bg p-5 rounded-2xl border shadow-xl flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-title mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-shield-halved text-amber-500"></i> Status Kerentanan Wilayah
+                    </h3>
+                    <div class="space-y-2.5 text-xs">
+                        <div class="flex justify-between items-center p-2 rounded-xl input-bg border">
+                            <span class="font-semibold">Megathrust Zone</span>
+                            <span class="px-2 py-0.5 bg-red-500/20 text-red-500 rounded font-bold">Tinggi (Awas)</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 rounded-xl input-bg border">
+                            <span class="font-semibold">Aktivitas Sesar Darat</span>
+                            <span class="px-2 py-0.5 bg-amber-500/20 text-amber-500 rounded font-bold">Sedang (Siaga)</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 rounded-xl input-bg border">
+                            <span class="font-semibold">Vulkanik / Intraslab</span>
+                            <span class="px-2 py-0.5 bg-yellow-500/25 text-yellow-600 rounded font-bold">Waspada</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-700/40 text-[11px] text-sub text-center">
+                    Berdasarkan parameter filter aktif saat ini.
+                </div>
+            </div>
+
+        </section>
+
+        <!-- STATISTIC CARDS -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <div class="card-bg p-5 rounded-2xl border flex flex-col justify-between transition">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-sub">TOTAL KEJADIAN GEMPA</span>
+                <div class="mt-3 flex items-baseline justify-between">
+                    <span id="statTotal" class="text-3xl font-extrabold text-title">0</span>
+                    <i class="fa-solid fa-bolt text-red-500/40 text-2xl"></i>
+                </div>
+                <span class="text-xs text-sub mt-2">Data Kejadian Terekam</span>
+            </div>
+
+            <div class="card-bg p-5 rounded-2xl border flex flex-col justify-between transition">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-sub">RATA-RATA MAGNITUDO</span>
+                <div class="mt-3 flex items-baseline justify-between">
+                    <span id="statAvgMag" class="text-3xl font-extrabold text-title">0.0 M</span>
+                    <i class="fa-solid fa-wave-square text-amber-500/40 text-2xl"></i>
+                </div>
+                <span id="statMaxMag" class="text-xs text-sub mt-2">Maks: 0.0 M</span>
+            </div>
+
+            <div class="card-bg p-5 rounded-2xl border flex flex-col justify-between transition">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-sub">KEDALAMAN RATA-RATA</span>
+                <div class="mt-3 flex items-baseline justify-between">
+                    <span id="statAvgDepth" class="text-3xl font-extrabold text-title">0 km</span>
+                    <i class="fa-solid fa-arrows-down-to-line text-blue-500/40 text-2xl"></i>
+                </div>
+                <span id="statDepthDesc" class="text-xs text-sub mt-2">Dominan Gempa Dangkal</span>
+            </div>
+
+            <div class="card-bg p-5 rounded-2xl border flex flex-col justify-between transition">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-sub">POTENSI TSUNAMI</span>
+                <div class="mt-3 flex items-baseline justify-between">
+                    <span id="statTsunami" class="text-3xl font-extrabold text-title">0</span>
+                    <i class="fa-solid fa-water text-cyan-500/40 text-2xl"></i>
+                </div>
+                <span id="statTsunamiPct" class="text-xs text-sub mt-2">0% dari total kejadian</span>
+            </div>
+
+            <div class="card-bg p-5 rounded-2xl border flex flex-col justify-between transition">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-sub">RATA-RATA RISK INDEX</span>
+                <div class="mt-3 flex items-baseline justify-between">
+                    <span id="statRisk" class="text-3xl font-extrabold text-amber-500">0%</span>
+                    <i class="fa-solid fa-shield-cat text-amber-500/40 text-2xl"></i>
+                </div>
+                <span class="text-xs text-sub mt-2">Indeks Kerentanan Wilayah</span>
+            </div>
+
+            <div class="card-bg p-5 rounded-2xl border flex flex-col justify-between transition">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-sub">LUAS DAMPAK KERUSAKAN</span>
+                <div class="mt-3 flex items-baseline justify-between">
+                    <span id="statArea" class="text-3xl font-extrabold text-title">0 km²</span>
+                    <i class="fa-solid fa-chart-area text-purple-500/40 text-2xl"></i>
+                </div>
+                <span class="text-xs text-sub mt-2">Total Luas Area Terdampak</span>
+            </div>
+
+            <div class="card-bg p-5 rounded-2xl border flex flex-col justify-between transition sm:col-span-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-sub">RATA-RATA SUSULAN</span>
+                <div class="mt-3 flex items-baseline justify-between">
+                    <span id="statAftershock" class="text-3xl font-extrabold text-title">0</span>
+                    <i class="fa-solid fa-bars-staggered text-emerald-500/40 text-2xl"></i>
+                </div>
+                <span class="text-xs text-sub mt-2">Gempa Susulan / Kejadian Utama</span>
+            </div>
+
+        </section>
+
+        <!-- ANALYTICS: CHARTS & DATA TABLE -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Chart Container -->
+            <div class="card-bg p-5 rounded-2xl border shadow-xl lg:col-span-1 block">
+                <h3 class="text-sm font-bold text-title mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-red-500"></i> Distribusi Kelas Magnitudo
+                </h3>
+                <div class="relative w-full h-[220px]">
+                    <canvas id="magnitudeChart"></canvas>
+                </div>
+                <p class="text-[11px] text-sub text-center mt-4 pt-3 border-t border-slate-700/40">
+                    Proporsi tingkat kekuatan gempa pada wilayah terpilih.
+                </p>
+            </div>
+
+            <!-- Table Container -->
+            <div class="card-bg p-5 rounded-2xl border shadow-xl lg:col-span-2">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h3 class="text-sm font-bold text-title flex items-center gap-2">
+                        <i class="fa-solid fa-list-ul text-sky-500"></i> Daftar Catatan Gempa Terdeteksi
+                    </h3>
+                    <span class="text-xs input-bg px-3 py-1 rounded-full text-sub font-medium border" id="tableFilterLabel">Filter: Sumatera</span>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="input-bg text-sub uppercase tracking-wider font-semibold">
+                            <tr>
+                                <th class="p-3 rounded-l-lg">Waktu</th>
+                                <th class="p-3">Lokasi / Pusat Gempa</th>
+                                <th class="p-3">Magnitudo</th>
+                                <th class="p-3">Kedalaman</th>
+                                <th class="p-3">Tsunami</th>
+                                <th class="p-3 rounded-r-lg">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="earthquakeTableBody" class="divide-y divide-slate-700/30 text-title">
+                            <!-- Rows via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <footer class="max-w-7xl mx-auto px-4 lg:px-8 mt-10 text-center text-xs text-sub">
+        <p>© 2026 Monitoring Seismik Terpadu Indonesia. Data geofisika disimulasikan untuk analisis mitigasi bencana.</p>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        const sampleEarthquakes = [
+            { id: 1, region: "Sumatera", year: 2023, mag: 5.4, depth: 15, type: "Sesar Aktif", tsunami: "Tidak Berpotensi", status: "Waspada", time: "2023-11-12 14:22", location: "Medan, Sumatera Utara", aftershocks: 12, riskIndex: 68, impactedArea: 450 },
+            { id: 2, region: "Sumatera", year: 2023, mag: 6.2, depth: 22, type: "Subduksi", tsunami: "Berpotensi", status: "Siaga", time: "2023-08-04 09:10", location: "Mentawai, Sumatera Barat", aftershocks: 34, riskIndex: 82, impactedArea: 1200 },
+            { id: 3, region: "Sumatera", year: 2024, mag: 4.8, depth: 10, type: "Sesar Aktif", tsunami: "Tidak Berpotensi", status: "Normal", time: "2024-01-15 03:45", location: "Banda Aceh, Aceh", aftershocks: 5, riskIndex: 45, impactedArea: 180 },
+            { id: 4, region: "Sumatera", year: 2025, mag: 7.1, depth: 45, type: "Subduksi", tsunami: "Berpotensi", status: "Awas", time: "2025-02-20 21:05", location: "Pesisir Lampung Selatan", aftershocks: 58, riskIndex: 94, impactedArea: 3500 },
+            { id: 5, region: "Sumatera", year: 2023, mag: 3.8, depth: 110, type: "Intraslab", tsunami: "Tidak Berpotensi", status: "Normal", time: "2023-05-18 11:30", location: "Palembang, Sumatera Selatan", aftershocks: 1, riskIndex: 25, impactedArea: 50 },
+
+            { id: 6, region: "Jawa", year: 2023, mag: 5.6, depth: 11, type: "Sesar Aktif", tsunami: "Tidak Berpotensi", status: "Siaga", time: "2023-12-01 13:21", location: "Cianjur, Jawa Barat", aftershocks: 42, riskIndex: 88, impactedArea: 890 },
+            { id: 7, region: "Jawa", year: 2024, mag: 4.5, depth: 18, type: "Sesar Aktif", tsunami: "Tidak Berpotensi", status: "Normal", time: "2024-03-10 08:12", location: "Bantul, DIY Yogyakarta", aftershocks: 8, riskIndex: 52, impactedArea: 210 },
+            { id: 8, region: "Jawa", year: 2025, mag: 6.4, depth: 65, type: "Subduksi", tsunami: "Tidak Berpotensi", status: "Siaga", time: "2025-04-05 17:09", location: "Pesisir Malang, Jawa Timur", aftershocks: 29, riskIndex: 78, impactedArea: 1450 },
+
+            { id: 10, region: "Bali & Nusa Tenggara", year: 2023, mag: 5.8, depth: 14, type: "Subduksi", tsunami: "Tidak Berpotensi", status: "Waspada", time: "2023-09-14 02:11", location: "Lombok Utara, NTB", aftershocks: 21, riskIndex: 72, impactedArea: 750 },
+            { id: 12, region: "Bali & Nusa Tenggara", year: 2025, mag: 6.5, depth: 20, type: "Subduksi", tsunami: "Berpotensi", status: "Awas", time: "2025-01-14 10:05", location: "Kupang, NTT", aftershocks: 38, riskIndex: 89, impactedArea: 2100 },
+
+            { id: 13, region: "Kalimantan", year: 2023, mag: 4.1, depth: 10, type: "Sesar Aktif", tsunami: "Tidak Berpotensi", status: "Normal", time: "2023-04-12 07:15", location: "Kutai Timur, Kalimantan Timur", aftershocks: 3, riskIndex: 35, impactedArea: 90 },
+
+            { id: 15, region: "Sulawesi", year: 2023, mag: 6.8, depth: 10, type: "Sesar Aktif", tsunami: "Berpotensi", status: "Awas", time: "2023-10-10 16:50", location: "Palu, Sulawesi Tengah", aftershocks: 65, riskIndex: 96, impactedArea: 2800 },
+            { id: 17, region: "Sulawesi", year: 2025, mag: 5.7, depth: 95, type: "Intraslab", tsunami: "Tidak Berpotensi", status: "Waspada", time: "2025-03-01 04:22", location: "Manado, Sulawesi Utara", aftershocks: 15, riskIndex: 64, impactedArea: 520 },
+
+            { id: 18, region: "Maluku & Papua", year: 2023, mag: 6.1, depth: 140, type: "Intraslab", tsunami: "Tidak Berpotensi", status: "Waspada", time: "2023-07-22 05:00", location: "Ambon, Maluku", aftershocks: 19, riskIndex: 70, impactedArea: 980 },
+            { id: 20, region: "Maluku & Papua", year: 2025, mag: 6.7, depth: 30, type: "Subduksi", tsunami: "Berpotensi", status: "Awas", time: "2025-01-08 12:33", location: "Halmahera, Maluku Utara", aftershocks: 48, riskIndex: 91, impactedArea: 2400 }
+        ];
+
+        let chartInstance;
+        let seismographInstance;
+
+        function getMarkerColor(mag) {
+            if (mag >= 5.5) return '#ef4444';
+            if (mag >= 4.0) return '#f59e0b';
+            return '#10b981';
+        }
+
+        function getStatusBadge(status) {
+            switch(status) {
+                case 'Awas': return 'bg-red-500/20 text-red-500 border border-red-500/40';
+                case 'Siaga': return 'bg-amber-500/20 text-amber-500 border border-amber-500/40';
+                case 'Waspada': return 'bg-yellow-500/20 text-yellow-600 border border-yellow-500/40';
+                default: return 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40';
+            }
+        }
+
+        function applyFilters() {
+            const selectedTahun = document.getElementById('filterTahun').value;
+            const selectedWilayah = document.getElementById('filterWilayah').value;
+            const selectedMag = document.getElementById('filterMagnitudo').value;
+            const selectedKedalaman = document.getElementById('filterKedalaman').value;
+            const selectedTipe = document.getElementById('filterTipe').value;
+            const selectedTsunami = document.getElementById('filterTsunami').value;
+            const selectedPeringatan = document.getElementById('filterPeringatan').value;
+
+            document.getElementById('tableFilterLabel').innerText = `Filter: ${selectedWilayah}`;
+
+            const filteredData = sampleEarthquakes.filter(item => {
+                if (selectedTahun !== 'Semua' && item.year.toString() !== selectedTahun) return false;
+                if (selectedWilayah !== 'Semua Wilayah' && item.region !== selectedWilayah) return false;
+                if (selectedTipe !== 'Semua' && item.type !== selectedTipe) return false;
+                if (selectedTsunami !== 'Semua' && item.tsunami !== selectedTsunami) return false;
+                if (selectedPeringatan !== 'Semua' && item.status !== selectedPeringatan) return false;
+
+                if (selectedMag === 'Kecil' && item.mag >= 4.0) return false;
+                if (selectedMag === 'Sedang' && (item.mag < 4.0 || item.mag > 5.5)) return false;
+                if (selectedMag === 'Kuat' && item.mag <= 5.5) return false;
+
+                if (selectedKedalaman === 'Dangkal' && item.depth >= 60) return false;
+                if (selectedKedalaman === 'Menengah' && (item.depth < 60 || item.depth > 300)) return false;
+                if (selectedKedalaman === 'Dalam' && item.depth <= 300) return false;
+
+                return true;
+            });
+
+            updateStatistics(filteredData);
+            updateChart(filteredData);
+            updateTable(filteredData);
+        }
+
+        function updateStatistics(data) {
+            const total = data.length;
+            document.getElementById('statTotal').innerText = total;
+
+            if (total === 0) {
+                document.getElementById('statAvgMag').innerText = '0.0 M';
+                document.getElementById('statMaxMag').innerText = 'Maks: 0.0 M';
+                document.getElementById('statAvgDepth').innerText = '0 km';
+                document.getElementById('statTsunami').innerText = '0';
+                document.getElementById('statTsunamiPct').innerText = '0%';
+                document.getElementById('statRisk').innerText = '0%';
+                document.getElementById('statArea').innerText = '0 km²';
+                document.getElementById('statAftershock').innerText = '0';
+                return;
+            }
+
+            const avgMag = (data.reduce((acc, curr) => acc + curr.mag, 0) / total).toFixed(2);
+            const maxMag = Math.max(...data.map(d => d.mag)).toFixed(1);
+            const avgDepth = (data.reduce((acc, curr) => acc + curr.depth, 0) / total).toFixed(1);
+            const tsunamiCount = data.filter(d => d.tsunami === 'Berpotensi').length;
+            const tsunamiPct = ((tsunamiCount / total) * 100).toFixed(1);
+            const avgRisk = (data.reduce((acc, curr) => acc + curr.riskIndex, 0) / total).toFixed(1);
+            const totalArea = data.reduce((acc, curr) => acc + curr.impactedArea, 0);
+            const avgAftershocks = (data.reduce((acc, curr) => acc + curr.aftershocks, 0) / total).toFixed(1);
+
+            document.getElementById('statAvgMag').innerText = `${avgMag} M`;
+            document.getElementById('statMaxMag').innerText = `Maks: ${maxMag} M`;
+            document.getElementById('statAvgDepth').innerText = `${avgDepth} km`;
+            document.getElementById('statTsunami').innerText = tsunamiCount;
+            document.getElementById('statTsunamiPct').innerText = `${tsunamiPct}% dari total`;
+            document.getElementById('statRisk').innerText = `${avgRisk}%`;
+            document.getElementById('statArea').innerText = `${totalArea} km²`;
+            document.getElementById('statAftershock').innerText = avgAftershocks;
+        }
+
+        function updateChart(data) {
+            const kecil = data.filter(d => d.mag < 4.0).length;
+            const sedang = data.filter(d => d.mag >= 4.0 && d.mag < 5.5).length;
+            const kuat = data.filter(d => d.mag >= 5.5).length;
+
+            if (chartInstance) chartInstance.destroy();
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#94a3b8' : '#475569';
+
+            const ctx = document.getElementById('magnitudeChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Kecil (<4.0)', 'Sedang (4.0-5.4)', 'Kuat (≥5.5)'],
+                    datasets: [{
+                        data: [kecil, sedang, kuat],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: textColor, font: { size: 11 } }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function initSeismograph() {
+            const ctx = document.getElementById('seismographChart').getContext('2d');
+            const waveData = Array.from({length: 50}, () => (Math.random() - 0.5) * 2);
+            const labels = Array.from({length: 50}, (_, i) => i);
+
+            seismographInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: waveData,
+                        borderColor: '#22c55e',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { display: false },
+                        y: { display: false, min: -3, max: 3 }
+                    },
+                    plugins: { legend: { display: false } },
+                    animation: false
+                }
+            });
+
+            // Animasi gelombang real-time
+            setInterval(() => {
+                if (!seismographInstance) return;
+                const data = seismographInstance.data.datasets[0].data;
+                data.shift();
+                data.push((Math.random() - 0.5) * (Math.random() > 0.9 ? 4.5 : 1.2));
+                seismographInstance.update('none');
+            }, 80);
+        }
+
+        function updateTable(data) {
+            const tableBody = document.getElementById('earthquakeTableBody');
+            tableBody.innerHTML = '';
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-sub">Tidak ada data gempa yang memenuhi filter.</td></tr>`;
+                return;
+            }
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-500/10 transition duration-150";
+
+                tr.innerHTML = `
+                    <td class="p-3 font-mono text-[11px] text-sub">${item.time}</td>
+                    <td class="p-3 font-semibold text-title">${item.location}</td>
+                    <td class="p-3"><span class="font-bold px-2 py-0.5 rounded text-[11px]" style="background-color: ${getMarkerColor(item.mag)}20; color: ${getMarkerColor(item.mag)}">${item.mag} M</span></td>
+                    <td class="p-3 text-sub">${item.depth} km</td>
+                    <td class="p-3"><span class="${item.tsunami === 'Berpotensi' ? 'text-red-500 font-bold' : 'text-sub'}">${item.tsunami}</span></td>
+                    <td class="p-3"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusBadge(item.status)}">${item.status}</span></td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('filterTahun').value = 'Semua';
+            document.getElementById('filterWilayah').value = 'Semua Wilayah';
+            document.getElementById('filterMagnitudo').value = 'Semua';
+            document.getElementById('filterKedalaman').value = 'Semua';
+            document.getElementById('filterTipe').value = 'Semua';
+            document.getElementById('filterTsunami').value = 'Semua';
+            document.getElementById('filterPeringatan').value = 'Semua';
+            applyFilters();
+        }
+
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            const html = document.documentElement;
+            const isDark = html.classList.toggle('dark');
+            
+            document.getElementById('themeText').innerText = isDark ? 'Mode Gelap' : 'Mode Terang';
+            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-moon text-amber-400' : 'fa-solid fa-sun text-amber-500';
+            
+            applyFilters();
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyFilters();
+            initSeismograph();
+        });
+    </script>
+</body>
+</html>
